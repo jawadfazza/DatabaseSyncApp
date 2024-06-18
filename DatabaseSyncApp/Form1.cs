@@ -36,8 +36,6 @@ namespace DatabaseSyncApp
 
         private void TransferButton_Click(object sender, EventArgs e)
         {
-          
-
             if (sourceLabel.Text != "" && destinationLabel.Text != "")
             {
                 string sourceConnectionString = sourceLabel.Text;
