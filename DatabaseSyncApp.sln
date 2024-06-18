@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseSyncApp", "DatabaseSyncApp\DatabaseSyncApp.csproj", "{35598101-5238-4F3B-BF9B-F0C031255CED}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{35598101-5238-4F3B-BF9B-F0C031255CED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35598101-5238-4F3B-BF9B-F0C031255CED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35598101-5238-4F3B-BF9B-F0C031255CED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35598101-5238-4F3B-BF9B-F0C031255CED}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3B88950A-E5CA-4E92-9639-9C9A0636E7DD}
+	EndGlobalSection
+EndGlobal
