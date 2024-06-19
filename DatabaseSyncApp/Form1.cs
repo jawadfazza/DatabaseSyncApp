@@ -17,7 +17,15 @@ namespace DatabaseSyncApp
         {
             InitializeComponent();
 
+            LoadConnections();
+        }
+
+        private void LoadConnections()
+        {
             List<(string, string)> connections = LoadConnectionStrings();
+
+            sourceComboBox.Items.Clear();
+            destinationComboBox.Items.Clear();
             sourceComboBox.Items.Add("");
             destinationComboBox.Items.Add("");
             foreach ((string name, string connection) in connections)
@@ -57,9 +65,33 @@ namespace DatabaseSyncApp
             DataTable dataTable = new DataTable();
 
             // Load data from the source table
-            using (SqlConnection sourceConnection = new SqlConnection($"{sourceConnectionString}"))
+            using (SqlConnection sourceConnection = new SqlConnection(sourceConnectionString))
             {
                 sourceConnection.Open();
+
+                // Check if the UniqueIdentifier column exists in the source table
+                bool sourceHasUniqueIdentifier;
+                using (SqlCommand checkColumnCmd = new SqlCommand(
+                    $"SELECT 1 FROM sys.columns WHERE Name = N'UniqueIdentifier' AND Object_ID = Object_ID(N'{tableName}')", sourceConnection))
+                {
+                    sourceHasUniqueIdentifier = checkColumnCmd.ExecuteScalar() != null;
+                }
+
+                if (!sourceHasUniqueIdentifier)
+                {
+                    // Add UniqueIdentifier column to the source table and assign NEWID() to each row
+                    using (SqlCommand addColumnCmd = new SqlCommand(
+                        $"ALTER TABLE {tableName} ADD UniqueIdentifier UNIQUEIDENTIFIER DEFAULT NEWID();", sourceConnection))
+                    {
+                        addColumnCmd.ExecuteNonQuery();
+                    }
+                    using (SqlCommand updateColumnCmd = new SqlCommand(
+                        $"UPDATE {tableName} SET UniqueIdentifier = NEWID() WHERE UniqueIdentifier IS NULL;", sourceConnection))
+                    {
+                        updateColumnCmd.ExecuteNonQuery();
+                    }
+                }
+
                 using (SqlCommand command = new SqlCommand($"SELECT * FROM {tableName}", sourceConnection))
                 {
                     using (SqlDataReader reader = command.ExecuteReader())
@@ -68,11 +100,9 @@ namespace DatabaseSyncApp
                     }
                 }
             }
+
             if (dataTable.Rows.Count > 0)
             {
-
-
-                // Optional: Create staging table to avoid duplication
                 string stagingTableName = tableName + "_Staging";
 
                 using (SqlConnection destinationConnection = new SqlConnection(destinationConnectionString))
@@ -89,8 +119,26 @@ namespace DatabaseSyncApp
 
                     if (!tableExists)
                     {
-                        //MessageBox.Show($"Table {tableName} does not exist in the destination database.");
+                        MessageBox.Show($"Table {tableName} does not exist in the destination database.");
                         return;
+                    }
+
+                    // Ensure the destination table has the UniqueIdentifier column
+                    bool destinationHasUniqueIdentifier;
+                    using (SqlCommand checkColumnCmd = new SqlCommand(
+                        $"SELECT 1 FROM sys.columns WHERE Name = N'UniqueIdentifier' AND Object_ID = Object_ID(N'{tableName}')", destinationConnection))
+                    {
+                        destinationHasUniqueIdentifier = checkColumnCmd.ExecuteScalar() != null;
+                    }
+
+                    if (!destinationHasUniqueIdentifier)
+                    {
+                        // Add UniqueIdentifier column to the destination table
+                        using (SqlCommand addColumnCmd = new SqlCommand(
+                            $"ALTER TABLE {tableName} ADD UniqueIdentifier UNIQUEIDENTIFIER;", destinationConnection))
+                        {
+                            addColumnCmd.ExecuteNonQuery();
+                        }
                     }
 
                     // Create the staging table
@@ -117,32 +165,67 @@ namespace DatabaseSyncApp
                         };
                         bulkCopy.NotifyAfter = 100;
 
+                        // Explicitly map the columns
+                        foreach (DataColumn column in dataTable.Columns)
+                        {
+                            bulkCopy.ColumnMappings.Add(column.ColumnName, column.ColumnName);
+                        }
+
                         try
                         {
                             bulkCopy.WriteToServer(dataTable);
 
-                            // Get the column names
-                            DataTable schemaTable = destinationConnection.GetSchema("Columns", new string[] { null, null, tableName });
+                            // Get the column names and identify identity columns
                             List<string> columnNames = new List<string>();
+                            List<string> insertColumnNames = new List<string>();
+                            string identityColumn = null;
 
-                            foreach (DataRow row in schemaTable.Rows)
+                            using (SqlCommand getIdentityColumnsCmd = new SqlCommand(
+                                $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS " +
+                                $"WHERE TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = 'dbo' AND COLUMNPROPERTY(object_id(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1", destinationConnection))
                             {
-                                string columnName = row["COLUMN_NAME"].ToString();
-                               
+                                using (SqlDataReader reader = getIdentityColumnsCmd.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        identityColumn = reader.GetString(0);
+                                    }
+                                }
+                            }
+
+                            using (SqlCommand getColumnsCmd = new SqlCommand(
+                                $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = 'dbo'", destinationConnection))
+                            {
+                                using (SqlDataReader reader = getColumnsCmd.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        string columnName = reader.GetString(0);
+                                        if (columnName != "UniqueIdentifier" && columnName != identityColumn)
+                                        {
+                                            insertColumnNames.Add(columnName);
+                                            columnNames.Add(columnName);
+                                        }
+
+                                    }
+                                }
                             }
 
                             string columnsList = string.Join(", ", columnNames);
                             string sourceColumnList = string.Join(", ", columnNames.Select(col => $"Source.{col}"));
-                            string primaryKey = columnNames[0]; // Assuming the first non-identity column is the primary key
+                            string insertColumnsList = string.Join(", ", insertColumnNames);
+                            string insertSourceColumnList = string.Join(", ", insertColumnNames.Select(col => $"Source.{col}"));
 
                             // Merge data from the staging table to the destination table
                             using (SqlCommand mergeCmd = new SqlCommand(
                                 $"MERGE INTO {tableName} AS Target " +
                                 $"USING {stagingTableName} AS Source " +
-                                $"ON Target.{primaryKey} = Source.{primaryKey} " + // Adjust this condition based on your table's primary key
+                                $"ON Target.UniqueIdentifier = Source.UniqueIdentifier " +
+                                $"WHEN MATCHED THEN " +
+                                $"UPDATE SET {string.Join(", ", columnNames.Select(col => $"Target.{col} = Source.{col}"))} " +
                                 $"WHEN NOT MATCHED BY TARGET THEN " +
-                                $"INSERT ({columnsList}) " +
-                                $"VALUES ({sourceColumnList});", destinationConnection))
+                                $"INSERT ({insertColumnsList}) " +
+                                $"VALUES ({insertSourceColumnList});", destinationConnection))
                             {
                                 mergeCmd.ExecuteNonQuery();
                             }
@@ -164,7 +247,6 @@ namespace DatabaseSyncApp
                 }
             }
         }
-
 
         private void AddConnectionStringButton_Click(object sender, EventArgs e)
         {
@@ -322,6 +404,44 @@ namespace DatabaseSyncApp
             {
                 MessageBox.Show($"Connection failed: {ex.Message}");
                 return false;
+            }
+        }
+
+        private void BtnDeleteSource_Click(object sender, EventArgs e)
+        {
+           
+                DeleteConnectionStringByName(sourceComboBox.SelectedItem.ToString());
+                LoadConnections();
+            
+        }
+
+       
+        private void BtnRefreshSource_Click(object sender, EventArgs e)
+        {
+            // Implement the logic to refresh the source connections
+            LoadConnections();
+        }
+
+        private void DeleteConnectionStringByName(string name)
+        {
+            if (!File.Exists(ConfigFilePath))
+            {
+                MessageBox.Show("Configuration file not found.");
+                return;
+            }
+
+            XElement config = XElement.Load(ConfigFilePath);
+            XElement connectionToDelete = config.Elements("Connection").FirstOrDefault(el => el.Element("Name")?.Value == name);
+
+            if (connectionToDelete != null)
+            {
+                connectionToDelete.Remove();
+                config.Save(ConfigFilePath);
+                MessageBox.Show($"Connection string '{name}' deleted successfully.");
+            }
+            else
+            {
+                MessageBox.Show($"Connection string '{name}' not found.");
             }
         }
 
