@@ -27,11 +27,17 @@
             progressBar = new ProgressBar();
             btnDeleteSource = new Button();
             btnRefreshSource = new Button();
+            cancelTransferButton = new Button();
+            messageLabel = new Label();
+            tableProgressBar = new ProgressBar();
+            label3 = new Label();
+            label4 = new Label();
             SuspendLayout();
             // 
             // sourceComboBox
             // 
             sourceComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            sourceComboBox.DropDownWidth = 380;
             sourceComboBox.Font = new Font("Segoe UI", 12F);
             sourceComboBox.FormattingEnabled = true;
             sourceComboBox.Location = new Point(111, 29);
@@ -44,6 +50,7 @@
             // destinationComboBox
             // 
             destinationComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            destinationComboBox.DropDownWidth = 380;
             destinationComboBox.Font = new Font("Segoe UI", 12F);
             destinationComboBox.FormattingEnabled = true;
             destinationComboBox.Location = new Point(111, 85);
@@ -55,25 +62,27 @@
             // 
             // transferButton
             // 
-            transferButton.Font = new Font("Segoe UI", 12F);
+            transferButton.BackColor = SystemColors.MenuHighlight;
+            transferButton.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold);
+            transferButton.ForeColor = SystemColors.ControlLightLight;
             transferButton.Location = new Point(111, 179);
             transferButton.Margin = new Padding(4, 3, 4, 3);
             transferButton.Name = "transferButton";
-            transferButton.Size = new Size(377, 36);
+            transferButton.Size = new Size(185, 36);
             transferButton.TabIndex = 6;
             transferButton.Text = "Transfer";
-            transferButton.UseVisualStyleBackColor = true;
+            transferButton.UseVisualStyleBackColor = false;
             transferButton.Click += TransferButton_Click;
             // 
             // addConnectionStringButton
             // 
-            addConnectionStringButton.Font = new Font("Segoe UI", 12F);
+            addConnectionStringButton.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold);
             addConnectionStringButton.Location = new Point(111, 137);
             addConnectionStringButton.Margin = new Padding(4, 3, 4, 3);
             addConnectionStringButton.Name = "addConnectionStringButton";
             addConnectionStringButton.Size = new Size(377, 36);
             addConnectionStringButton.TabIndex = 7;
-            addConnectionStringButton.Text = "Configure New Connection";
+            addConnectionStringButton.Text = "Confige New Connection";
             addConnectionStringButton.UseVisualStyleBackColor = true;
             addConnectionStringButton.Click += AddConnectionStringButton_Click;
             // 
@@ -148,16 +157,73 @@
             btnRefreshSource.Location = new Point(542, 29);
             btnRefreshSource.Margin = new Padding(4, 3, 4, 3);
             btnRefreshSource.Name = "btnRefreshSource";
-            btnRefreshSource.Size = new Size(38, 30);
+            btnRefreshSource.Size = new Size(38, 29);
             btnRefreshSource.TabIndex = 18;
             btnRefreshSource.UseVisualStyleBackColor = false;
             btnRefreshSource.Click += BtnRefreshSource_Click;
+            // 
+            // cancelTransferButton
+            // 
+            cancelTransferButton.BackColor = Color.IndianRed;
+            cancelTransferButton.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold);
+            cancelTransferButton.Location = new Point(303, 179);
+            cancelTransferButton.Margin = new Padding(4, 3, 4, 3);
+            cancelTransferButton.Name = "cancelTransferButton";
+            cancelTransferButton.Size = new Size(185, 36);
+            cancelTransferButton.TabIndex = 19;
+            cancelTransferButton.Text = "Cancel Transfer";
+            cancelTransferButton.UseVisualStyleBackColor = false;
+            cancelTransferButton.Click += cancelTransferButton_Click;
+            // 
+            // messageLabel
+            // 
+            messageLabel.AutoSize = true;
+            messageLabel.Location = new Point(111, 282);
+            messageLabel.Margin = new Padding(4, 0, 4, 0);
+            messageLabel.Name = "messageLabel";
+            messageLabel.Size = new Size(42, 15);
+            messageLabel.TabIndex = 20;
+            messageLabel.Text = "Status:";
+            // 
+            // tableProgressBar
+            // 
+            tableProgressBar.Location = new Point(111, 250);
+            tableProgressBar.Margin = new Padding(4, 3, 4, 3);
+            tableProgressBar.Name = "tableProgressBar";
+            tableProgressBar.Size = new Size(377, 23);
+            tableProgressBar.TabIndex = 21;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(10, 229);
+            label3.Margin = new Padding(4, 0, 4, 0);
+            label3.Name = "label3";
+            label3.Size = new Size(93, 15);
+            label3.TabIndex = 22;
+            label3.Text = "Row Transaction";
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Location = new Point(4, 258);
+            label4.Margin = new Padding(4, 0, 4, 0);
+            label4.Name = "label4";
+            label4.Size = new Size(97, 15);
+            label4.TabIndex = 23;
+            label4.Text = "Table Transaction";
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(599, 263);
+            BackColor = SystemColors.Info;
+            ClientSize = new Size(599, 316);
+            Controls.Add(label4);
+            Controls.Add(label3);
+            Controls.Add(tableProgressBar);
+            Controls.Add(messageLabel);
+            Controls.Add(cancelTransferButton);
             Controls.Add(btnRefreshSource);
             Controls.Add(btnDeleteSource);
             Controls.Add(progressBar);
@@ -187,5 +253,10 @@
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Button btnDeleteSource;
         private System.Windows.Forms.Button btnRefreshSource;
+        private Button cancelTransferButton;
+        private Label label3;
+        private Label messageLabel;
+        private ProgressBar tableProgressBar;
+        private Label label4;
     }
 }

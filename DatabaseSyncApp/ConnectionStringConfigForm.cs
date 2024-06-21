@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -32,6 +33,7 @@ namespace DatabaseSyncApp
             SaveConnectionString(name, connectionString);
 
             MessageBox.Show("Connection string saved successfully.");
+            this.Close();
         }
 
         private void SaveConnectionString(string name, string connectionString)
@@ -56,10 +58,38 @@ namespace DatabaseSyncApp
             doc.Save("connectionStrings.xml");
         }
 
-
-        private void textBox1_TextChanged(object sender, EventArgs e)
+        private bool TestConnection(string connectionString)
         {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    MessageBox.Show($"Connected Successfully");
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Connection failed: {ex.Message}");
+                return false;
+            }
+        }
 
+
+
+
+        private void testButton_Click(object sender, EventArgs e)
+        {
+            string name = nameTextBox.Text;
+            string serverName = serverTextBox.Text;
+            string databaseName = databaseTextBox.Text;
+            string username = usernameTextBox.Text;
+            string password = passwordTextBox.Text;
+
+            string connectionString = $"Server={serverName};Database={databaseName};User Id={username};Password={password};";
+
+            TestConnection(connectionString);
         }
     }
 }

@@ -44,209 +44,317 @@ namespace DatabaseSyncApp
 
         private void TransferButton_Click(object sender, EventArgs e)
         {
+            cancelTransferButton.Enabled = false;
+            transferButton.Enabled = false;
             if (sourceLabel.Text != "" && destinationLabel.Text != "")
             {
                 string sourceConnectionString = sourceLabel.Text;
                 string destinationConnectionString = destinationLabel.Text;
-               
 
+                int count = 1;
                 List<string> tableNames = GetTableNames(sourceConnectionString);
-
+                tableProgressBar.Minimum = 0;
+                tableProgressBar.Maximum = tableNames.Count;
+                tableProgressBar.Value = 0;
                 foreach (string tableName in tableNames)
                 {
-                    TransferTableData(sourceConnectionString, destinationConnectionString,  tableName, progressBar);
+                    TransferTableData(sourceConnectionString, destinationConnectionString, tableName, progressBar);
+                    tableProgressBar.Value = count++;
                 }
             }
+            cancelTransferButton.Enabled = true;
+            transferButton.Enabled = true;
         }
 
-
-        private void TransferTableData(string sourceConnectionString, string destinationConnectionString, string tableName, ProgressBar progressBar)
-        {
+         private void TransferTableData(string sourceConnectionString, string destinationConnectionString, string tableName, ProgressBar progressBar)
+         { 
             DataTable dataTable = new DataTable();
 
-            // Load data from the source table
-            using (SqlConnection sourceConnection = new SqlConnection(sourceConnectionString))
+            try
             {
-                sourceConnection.Open();
-
-                // Check if the UniqueIdentifier column exists in the source table
-                bool sourceHasUniqueIdentifier;
-                using (SqlCommand checkColumnCmd = new SqlCommand(
-                    $"SELECT 1 FROM sys.columns WHERE Name = N'UniqueIdentifier' AND Object_ID = Object_ID(N'{tableName}')", sourceConnection))
+                // Load data from the source table
+                using (SqlConnection sourceConnection = new SqlConnection(sourceConnectionString))
                 {
-                    sourceHasUniqueIdentifier = checkColumnCmd.ExecuteScalar() != null;
-                }
+                    sourceConnection.Open();
 
-                if (!sourceHasUniqueIdentifier)
-                {
-                    // Add UniqueIdentifier column to the source table and assign NEWID() to each row
-                    using (SqlCommand addColumnCmd = new SqlCommand(
-                        $"ALTER TABLE {tableName} ADD UniqueIdentifier UNIQUEIDENTIFIER DEFAULT NEWID();", sourceConnection))
+                    // Check if the UniqueIdentifier column exists in the source table
+                    bool sourceHasUniqueIdentifier = ColumnExists(sourceConnection, tableName, "UniqueIdentifier");
+
+                    if (!sourceHasUniqueIdentifier)
                     {
-                        addColumnCmd.ExecuteNonQuery();
+                        // Add UniqueIdentifier column to the source table and assign NEWID() to each row
+                        AddUniqueIdentifierColumn(sourceConnection, tableName);
                     }
-                    using (SqlCommand updateColumnCmd = new SqlCommand(
-                        $"UPDATE {tableName} SET UniqueIdentifier = NEWID() WHERE UniqueIdentifier IS NULL;", sourceConnection))
-                    {
-                        updateColumnCmd.ExecuteNonQuery();
-                    }
-                }
 
-                using (SqlCommand command = new SqlCommand($"SELECT * FROM {tableName}", sourceConnection))
-                {
-                    using (SqlDataReader reader = command.ExecuteReader())
+                    // Load data from the source table into DataTable
+                    using (SqlCommand command = new SqlCommand($"SELECT * FROM {tableName}", sourceConnection))
                     {
-                        dataTable.Load(reader);
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            dataTable.Load(reader);
+                        }
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading data from source table: {ex.Message}");
+                return;
+            }
 
+            // Proceed only if there is data to transfer
             if (dataTable.Rows.Count > 0)
             {
-                string stagingTableName = tableName + "_Staging";
+                string stagingTableName = $"{tableName}_Staging";
 
-                using (SqlConnection destinationConnection = new SqlConnection(destinationConnectionString))
+                try
                 {
-                    destinationConnection.Open();
-
-                    // Check if the destination table exists
-                    bool tableExists = false;
-                    using (SqlCommand checkTableCmd = new SqlCommand(
-                        $"IF OBJECT_ID('{tableName}', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0;", destinationConnection))
+                    using (SqlConnection destinationConnection = new SqlConnection(destinationConnectionString))
                     {
-                        tableExists = (int)checkTableCmd.ExecuteScalar() == 1;
-                    }
+                        destinationConnection.Open();
 
-                    if (!tableExists)
-                    {
-                        MessageBox.Show($"Table {tableName} does not exist in the destination database.");
-                        return;
-                    }
+                        // Check if the destination table exists
+                        bool tableExists = TableExists(destinationConnection, tableName);
 
-                    // Ensure the destination table has the UniqueIdentifier column
-                    bool destinationHasUniqueIdentifier;
-                    using (SqlCommand checkColumnCmd = new SqlCommand(
-                        $"SELECT 1 FROM sys.columns WHERE Name = N'UniqueIdentifier' AND Object_ID = Object_ID(N'{tableName}')", destinationConnection))
-                    {
-                        destinationHasUniqueIdentifier = checkColumnCmd.ExecuteScalar() != null;
-                    }
-
-                    if (!destinationHasUniqueIdentifier)
-                    {
-                        // Add UniqueIdentifier column to the destination table
-                        using (SqlCommand addColumnCmd = new SqlCommand(
-                            $"ALTER TABLE {tableName} ADD UniqueIdentifier UNIQUEIDENTIFIER;", destinationConnection))
+                        if (!tableExists)
                         {
-                            addColumnCmd.ExecuteNonQuery();
-                        }
-                    }
-
-                    // Create the staging table
-                    using (SqlCommand createStagingTableCmd = new SqlCommand(
-                        $"IF OBJECT_ID('{stagingTableName}', 'U') IS NOT NULL DROP TABLE {stagingTableName}; " +
-                        $"SELECT * INTO {stagingTableName} FROM {tableName} WHERE 1 = 0;", destinationConnection))
-                    {
-                        createStagingTableCmd.ExecuteNonQuery();
-                    }
-
-                    // Use SqlBulkCopy to transfer data to the staging table
-                    using (SqlBulkCopy bulkCopy = new SqlBulkCopy(destinationConnection))
-                    {
-                        bulkCopy.DestinationTableName = stagingTableName;
-
-                        // Set up the progress bar
-                        progressBar.Minimum = 0;
-                        progressBar.Maximum = dataTable.Rows.Count;
-                        progressBar.Value = 0;
-
-                        bulkCopy.SqlRowsCopied += (sender, args) =>
-                        {
-                            progressBar.Value = (int)args.RowsCopied;
-                        };
-                        bulkCopy.NotifyAfter = 100;
-
-                        // Explicitly map the columns
-                        foreach (DataColumn column in dataTable.Columns)
-                        {
-                            bulkCopy.ColumnMappings.Add(column.ColumnName, column.ColumnName);
+                            //MessageBox.Show($"Table {tableName} does not exist in the destination database.");
+                            return;
                         }
 
-                        try
+                        // Ensure the destination table has the UniqueIdentifier column
+                        bool destinationHasUniqueIdentifier = ColumnExists(destinationConnection, tableName, "UniqueIdentifier");
+
+                        if (!destinationHasUniqueIdentifier)
                         {
-                            bulkCopy.WriteToServer(dataTable);
-
-                            // Get the column names and identify identity columns
-                            List<string> columnNames = new List<string>();
-                            List<string> insertColumnNames = new List<string>();
-                            string identityColumn = null;
-
-                            using (SqlCommand getIdentityColumnsCmd = new SqlCommand(
-                                $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS " +
-                                $"WHERE TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = 'dbo' AND COLUMNPROPERTY(object_id(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1", destinationConnection))
-                            {
-                                using (SqlDataReader reader = getIdentityColumnsCmd.ExecuteReader())
-                                {
-                                    while (reader.Read())
-                                    {
-                                        identityColumn = reader.GetString(0);
-                                    }
-                                }
-                            }
-
-                            using (SqlCommand getColumnsCmd = new SqlCommand(
-                                $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = 'dbo'", destinationConnection))
-                            {
-                                using (SqlDataReader reader = getColumnsCmd.ExecuteReader())
-                                {
-                                    while (reader.Read())
-                                    {
-                                        string columnName = reader.GetString(0);
-                                        if (columnName != "UniqueIdentifier" && columnName != identityColumn)
-                                        {
-                                            insertColumnNames.Add(columnName);
-                                            columnNames.Add(columnName);
-                                        }
-
-                                    }
-                                }
-                            }
-
-                            string columnsList = string.Join(", ", columnNames);
-                            string sourceColumnList = string.Join(", ", columnNames.Select(col => $"Source.{col}"));
-                            string insertColumnsList = string.Join(", ", insertColumnNames);
-                            string insertSourceColumnList = string.Join(", ", insertColumnNames.Select(col => $"Source.{col}"));
-
-                            // Merge data from the staging table to the destination table
-                            using (SqlCommand mergeCmd = new SqlCommand(
-                                $"MERGE INTO {tableName} AS Target " +
-                                $"USING {stagingTableName} AS Source " +
-                                $"ON Target.UniqueIdentifier = Source.UniqueIdentifier " +
-                                $"WHEN MATCHED THEN " +
-                                $"UPDATE SET {string.Join(", ", columnNames.Select(col => $"Target.{col} = Source.{col}"))} " +
-                                $"WHEN NOT MATCHED BY TARGET THEN " +
-                                $"INSERT ({insertColumnsList}) " +
-                                $"VALUES ({insertSourceColumnList});", destinationConnection))
-                            {
-                                mergeCmd.ExecuteNonQuery();
-                            }
-
-                            // Drop the staging table
-                            using (SqlCommand dropStagingTableCmd = new SqlCommand(
-                                $"DROP TABLE {stagingTableName};", destinationConnection))
-                            {
-                                dropStagingTableCmd.ExecuteNonQuery();
-                            }
-
-                            MessageBox.Show($"Data transferred successfully for table {tableName}.");
+                            // Add UniqueIdentifier column to the destination table
+                            AddUniqueIdentifierColumn(destinationConnection, tableName);
                         }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Error occurred while transferring data for table {tableName}: " + ex.Message);
-                        }
+
+                        // Create the staging table
+                        CreateStagingTable(destinationConnection, tableName, stagingTableName);
+
+                        // Transfer data to the staging table using SqlBulkCopy
+                        TransferDataToStagingTable(destinationConnection, dataTable, stagingTableName, progressBar);
+
+                        // Merge data from the staging table to the destination table
+                        MergeDataFromStagingToDestination(destinationConnection, tableName, stagingTableName);
+
+                        // Drop the staging table
+                        DropStagingTable(destinationConnection, stagingTableName);
+
+                        messageLabel.Text=$"Data transferred successfully for table {tableName}.";
                     }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error transferring data to destination table: {ex.Message}");
                 }
             }
         }
+
+        private bool ColumnExists(SqlConnection connection, string tableName, string columnName)
+        {
+            try
+            {
+                using (SqlCommand checkColumnCmd = new SqlCommand(
+                    $"SELECT 1 FROM sys.columns WHERE Name = N'{columnName}' AND Object_ID = Object_ID(N'{tableName}')", connection))
+                {
+                    return checkColumnCmd.ExecuteScalar() != null;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error checking column existence: {ex.Message}");
+                return false;
+            }
+        }
+
+        private void AddUniqueIdentifierColumn(SqlConnection connection, string tableName)
+        {
+            try
+            {
+                using (SqlCommand addColumnCmd = new SqlCommand(
+                    $"ALTER TABLE {tableName} ADD UniqueIdentifier UNIQUEIDENTIFIER DEFAULT NEWID();", connection))
+                {
+                    addColumnCmd.ExecuteNonQuery();
+                }
+                using (SqlCommand updateColumnCmd = new SqlCommand(
+                    $"UPDATE {tableName} SET UniqueIdentifier = NEWID() WHERE UniqueIdentifier IS NULL;", connection))
+                {
+                    updateColumnCmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show($"Error adding UniqueIdentifier column: {ex.Message}");
+            }
+        }
+
+        private bool TableExists(SqlConnection connection, string tableName)
+        {
+            try
+            {
+                using (SqlCommand checkTableCmd = new SqlCommand(
+                    $"IF OBJECT_ID('{tableName}', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0;", connection))
+                {
+                    return (int)checkTableCmd.ExecuteScalar() == 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error checking table existence: {ex.Message}");
+                return false;
+            }
+        }
+
+        private void CreateStagingTable(SqlConnection connection, string tableName, string stagingTableName)
+        {
+            try
+            {
+                using (SqlCommand createStagingTableCmd = new SqlCommand(
+                    $"IF OBJECT_ID('{stagingTableName}', 'U') IS NOT NULL DROP TABLE {stagingTableName}; " +
+                    $"SELECT * INTO {stagingTableName} FROM {tableName} WHERE 1 = 0;", connection))
+                {
+                    createStagingTableCmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show($"Error creating staging table: {ex.Message}");
+            }
+        }
+
+        private void TransferDataToStagingTable(SqlConnection connection, DataTable dataTable, string stagingTableName, ProgressBar progressBar)
+        {
+            try
+            {
+                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection))
+                {
+                    bulkCopy.DestinationTableName = stagingTableName;
+
+                    // Set up the progress bar
+                    progressBar.Minimum = 0;
+                    progressBar.Maximum = dataTable.Rows.Count;
+                    progressBar.Value = 0;
+
+                    bulkCopy.SqlRowsCopied += (sender, args) =>
+                    {
+                        progressBar.Value = (int)args.RowsCopied;
+                    };
+                    bulkCopy.NotifyAfter = 100;
+
+                    // Explicitly map the columns
+                    foreach (DataColumn column in dataTable.Columns)
+                    {
+                        bulkCopy.ColumnMappings.Add(column.ColumnName, column.ColumnName);
+                    }
+
+                    bulkCopy.WriteToServer(dataTable);
+                }
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show($"Error transferring data to staging table: {ex.Message}");
+            }
+        }
+
+        private void MergeDataFromStagingToDestination(SqlConnection connection, string tableName, string stagingTableName)
+        {
+            try
+            {
+                // Get the column names and identify identity columns
+                List<string> columnNames = new List<string>();
+                List<string> insertColumnNames = new List<string>();
+                string identityColumn = GetIdentityColumn(connection, tableName);
+
+                using (SqlCommand getColumnsCmd = new SqlCommand(
+                    $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = 'dbo'", connection))
+                {
+                    using (SqlDataReader reader = getColumnsCmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            string columnName = reader.GetString(0);
+                            if (columnName != identityColumn)
+                            {
+                                insertColumnNames.Add(columnName);
+                                columnNames.Add(columnName);
+                            }
+
+                        }
+                    }
+                }
+
+                //string columnsList = string.Join(", ", columnNames);
+                //string sourceColumnList = string.Join(", ", columnNames.Select(col => $"Source.{col}"));
+                string insertColumnsList = string.Join(", ", insertColumnNames);
+                string insertSourceColumnList = string.Join(", ", insertColumnNames.Select(col => $"Source.{col}"));
+                int count = 0;
+                // Merge data from the staging table to the destination table
+                using (SqlCommand mergeCmd = new SqlCommand(
+                    $"MERGE INTO {tableName} AS Target " +
+                    $"USING {stagingTableName} AS Source " +
+                    $"ON Target.UniqueIdentifier = Source.UniqueIdentifier " +
+                    $"WHEN MATCHED THEN " +
+                    $"UPDATE SET {string.Join(", ", columnNames.Select(col => $"Target.{col} = Source.{col}"))} " +
+                    $"WHEN NOT MATCHED BY TARGET THEN " +
+                    $"INSERT ({insertColumnsList}) " +
+                    $"VALUES ({insertSourceColumnList});", connection))
+                {
+                    count= mergeCmd.ExecuteNonQuery();
+                }
+                progressBar.Value = count;
+            }
+            catch (Exception ex)
+            {
+               // MessageBox.Show($"Error merging data from staging table to destination table: {ex.Message}");
+            }
+        }
+
+        private void DropStagingTable(SqlConnection connection, string stagingTableName)
+        {
+            try
+            {
+                using (SqlCommand dropStagingTableCmd = new SqlCommand(
+                    $"DROP TABLE {stagingTableName};", connection))
+                {
+                    dropStagingTableCmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error dropping staging table: {ex.Message}");
+            }
+        }
+
+        private string GetIdentityColumn(SqlConnection connection, string tableName)
+        {
+            try
+            {
+                using (SqlCommand getIdentityColumnsCmd = new SqlCommand(
+                    $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS " +
+                    $"WHERE TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = 'dbo' AND COLUMNPROPERTY(object_id(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1", connection))
+                {
+                    using (SqlDataReader reader = getIdentityColumnsCmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return reader.GetString(0);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error identifying identity column: {ex.Message}");
+            }
+            return null;
+        }
+
+
+
+
 
         private void AddConnectionStringButton_Click(object sender, EventArgs e)
         {
@@ -370,7 +478,7 @@ namespace DatabaseSyncApp
             sourceLabel.Text = sourceComboBox.SelectedItem != null ? GetConnectionStringByName(name: sourceComboBox.SelectedItem.ToString()) : "";
         }
 
-        private void DestinationComboBox_SelectedIndexChanged(object sender, EventArgs e) 
+        private void DestinationComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             destinationLabel.Text = destinationComboBox.SelectedItem != null ? GetConnectionStringByName(name: destinationComboBox.SelectedItem.ToString()) : "";
         }
@@ -383,7 +491,7 @@ namespace DatabaseSyncApp
             {
                 if (connectionName == name)
                 {
-                    return TestConnection(connectionString)?connectionString:"";
+                    return TestConnection(connectionString) ? connectionString : "";
                 }
             }
 
@@ -409,13 +517,13 @@ namespace DatabaseSyncApp
 
         private void BtnDeleteSource_Click(object sender, EventArgs e)
         {
-           
-                DeleteConnectionStringByName(sourceComboBox.SelectedItem.ToString());
-                LoadConnections();
-            
+
+            DeleteConnectionStringByName(sourceComboBox.SelectedItem.ToString());
+            LoadConnections();
+
         }
 
-       
+
         private void BtnRefreshSource_Click(object sender, EventArgs e)
         {
             // Implement the logic to refresh the source connections
@@ -442,6 +550,137 @@ namespace DatabaseSyncApp
             else
             {
                 MessageBox.Show($"Connection string '{name}' not found.");
+            }
+        }
+
+        private async void cancelTransferButton_Click(object sender, EventArgs e)
+        {
+            cancelTransferButton.Enabled=false;
+            transferButton.Enabled = false;
+            if (sourceLabel.Text != "" && destinationLabel.Text != "")
+            {
+                string sourceConnectionString = sourceLabel.Text;
+                string destinationConnectionString = destinationLabel.Text;
+
+
+                int count = 1;
+                List<string> tableNames = GetTableNames(sourceConnectionString);
+                tableProgressBar.Minimum = 0;
+                tableProgressBar.Maximum = tableNames.Count;
+                tableProgressBar.Value = 0;
+                foreach (string tableName in tableNames)
+                {
+                    await CanecelTransferTableData(sourceConnectionString, destinationConnectionString, tableName, progressBar);
+                    tableProgressBar.Value=count++;
+                }
+            }
+            cancelTransferButton.Enabled = true;
+            transferButton.Enabled = true;
+        }
+
+        private async Task CanecelTransferTableData(string sourceConnectionString, string destinationConnectionString, string tableName, ProgressBar progressBar)
+        {
+            DataTable dataTable = new DataTable();
+
+            try
+            {
+                // Load data from the source table
+                using (SqlConnection sourceConnection = new SqlConnection(sourceConnectionString))
+                {
+                    await sourceConnection.OpenAsync();
+
+                    // Load data from the source table into DataTable
+                    using (SqlCommand command = new SqlCommand($"SELECT * FROM {tableName}", sourceConnection))
+                    {
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            dataTable.Load(reader);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading data from source table: {ex.Message}");
+                return;
+            }
+
+            // Proceed only if there is data to transfer
+            if (dataTable.Rows.Count > 0)
+            {
+                string stagingTableName = $"{tableName}";
+
+                using (SqlConnection destinationConnection = new SqlConnection(destinationConnectionString))
+                {
+                    try
+                    {
+                        await destinationConnection.OpenAsync();
+
+                        // Check if the destination table exists
+                        bool tableExists = await TableExistsAsync(destinationConnection, tableName);
+
+                        if (!tableExists)
+                        {
+                            //Invoke(new Action(() => MessageBox.Show($"Table {tableName} does not exist in the destination database.")));
+                            return;
+                        }
+
+                        // Delete records in the destination table that exist in the source table
+                        await DeleteRecordsInDestinationAsync(destinationConnection, dataTable, tableName);
+
+                        this.Invoke(new Action(() => messageLabel.Text = $"Data transfer canceled successfully for table {tableName}."));
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Invoke(new Action(() => messageLabel.Text = $"Error transferring data to destination table: {ex.Message}"));
+                    }
+                }
+            }
+        }
+
+
+
+        private async Task<bool> TableExistsAsync(SqlConnection connection, string tableName)
+        {
+            try
+            {
+                using (SqlCommand checkTableCmd = new SqlCommand(
+                    $"IF OBJECT_ID('{tableName}', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0;", connection))
+                {
+                    return (int)await checkTableCmd.ExecuteScalarAsync() == 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                this.Invoke(new Action(() => MessageBox.Show($"Error checking table existence: {ex.Message}")));
+                return false;
+            }
+        }
+
+        private async Task DeleteRecordsInDestinationAsync(SqlConnection connection, DataTable sourceData, string tableName)
+        {
+            try
+            {
+                int count = 1;
+               
+                progressBar.Minimum = 0;
+                progressBar.Maximum = sourceData.Rows.Count;
+                progressBar.Value = 0;
+                foreach (DataRow row in sourceData.Rows)
+                {
+                    string uniqueIdentifier = row["UniqueIdentifier"].ToString();
+                    using (SqlCommand deleteCmd = new SqlCommand(
+                        $"DELETE FROM {tableName} WHERE UniqueIdentifier = @UniqueIdentifier", connection))
+                    {
+                        deleteCmd.Parameters.AddWithValue("@UniqueIdentifier", uniqueIdentifier);
+                        await deleteCmd.ExecuteNonQueryAsync();
+                        progressBar.Value = count++;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                this.Invoke(new Action(() => MessageBox.Show($"Error deleting records from destination table: {ex.Message}")));
             }
         }
 

@@ -28,12 +28,13 @@ namespace DatabaseSyncApp
             saveButton = new Button();
             nameTextBox = new TextBox();
             label1 = new Label();
+            testButton = new Button();
             SuspendLayout();
             // 
             // serverLabel
             // 
             serverLabel.AutoSize = true;
-            serverLabel.Location = new Point(15, 103);
+            serverLabel.Location = new Point(15, 82);
             serverLabel.Margin = new Padding(4, 0, 4, 0);
             serverLabel.Name = "serverLabel";
             serverLabel.Size = new Size(42, 15);
@@ -42,7 +43,7 @@ namespace DatabaseSyncApp
             // 
             // serverTextBox
             // 
-            serverTextBox.Location = new Point(112, 100);
+            serverTextBox.Location = new Point(112, 79);
             serverTextBox.Margin = new Padding(4, 3, 4, 3);
             serverTextBox.Name = "serverTextBox";
             serverTextBox.Size = new Size(233, 23);
@@ -51,7 +52,7 @@ namespace DatabaseSyncApp
             // databaseLabel
             // 
             databaseLabel.AutoSize = true;
-            databaseLabel.Location = new Point(15, 138);
+            databaseLabel.Location = new Point(15, 117);
             databaseLabel.Margin = new Padding(4, 0, 4, 0);
             databaseLabel.Name = "databaseLabel";
             databaseLabel.Size = new Size(58, 15);
@@ -60,7 +61,7 @@ namespace DatabaseSyncApp
             // 
             // databaseTextBox
             // 
-            databaseTextBox.Location = new Point(112, 134);
+            databaseTextBox.Location = new Point(112, 113);
             databaseTextBox.Margin = new Padding(4, 3, 4, 3);
             databaseTextBox.Name = "databaseTextBox";
             databaseTextBox.Size = new Size(233, 23);
@@ -69,7 +70,7 @@ namespace DatabaseSyncApp
             // usernameLabel
             // 
             usernameLabel.AutoSize = true;
-            usernameLabel.Location = new Point(15, 173);
+            usernameLabel.Location = new Point(15, 152);
             usernameLabel.Margin = new Padding(4, 0, 4, 0);
             usernameLabel.Name = "usernameLabel";
             usernameLabel.Size = new Size(63, 15);
@@ -78,7 +79,7 @@ namespace DatabaseSyncApp
             // 
             // usernameTextBox
             // 
-            usernameTextBox.Location = new Point(112, 169);
+            usernameTextBox.Location = new Point(112, 148);
             usernameTextBox.Margin = new Padding(4, 3, 4, 3);
             usernameTextBox.Name = "usernameTextBox";
             usernameTextBox.Size = new Size(233, 23);
@@ -87,7 +88,7 @@ namespace DatabaseSyncApp
             // passwordLabel
             // 
             passwordLabel.AutoSize = true;
-            passwordLabel.Location = new Point(15, 207);
+            passwordLabel.Location = new Point(15, 186);
             passwordLabel.Margin = new Padding(4, 0, 4, 0);
             passwordLabel.Name = "passwordLabel";
             passwordLabel.Size = new Size(60, 15);
@@ -96,7 +97,7 @@ namespace DatabaseSyncApp
             // 
             // passwordTextBox
             // 
-            passwordTextBox.Location = new Point(112, 204);
+            passwordTextBox.Location = new Point(112, 183);
             passwordTextBox.Margin = new Padding(4, 3, 4, 3);
             passwordTextBox.Name = "passwordTextBox";
             passwordTextBox.PasswordChar = '*';
@@ -105,7 +106,7 @@ namespace DatabaseSyncApp
             // 
             // saveButton
             // 
-            saveButton.Location = new Point(258, 250);
+            saveButton.Location = new Point(258, 221);
             saveButton.Margin = new Padding(4, 3, 4, 3);
             saveButton.Name = "saveButton";
             saveButton.Size = new Size(88, 27);
@@ -121,7 +122,6 @@ namespace DatabaseSyncApp
             nameTextBox.Name = "nameTextBox";
             nameTextBox.Size = new Size(233, 23);
             nameTextBox.TabIndex = 10;
-            nameTextBox.TextChanged += textBox1_TextChanged;
             // 
             // label1
             // 
@@ -133,11 +133,23 @@ namespace DatabaseSyncApp
             label1.TabIndex = 9;
             label1.Text = "Name:";
             // 
+            // testButton
+            // 
+            testButton.Location = new Point(113, 221);
+            testButton.Margin = new Padding(4, 3, 4, 3);
+            testButton.Name = "testButton";
+            testButton.Size = new Size(116, 27);
+            testButton.TabIndex = 11;
+            testButton.Text = "Test Connection";
+            testButton.UseVisualStyleBackColor = true;
+            testButton.Click += testButton_Click;
+            // 
             // ConnectionStringConfigForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(358, 289);
+            Controls.Add(testButton);
             Controls.Add(nameTextBox);
             Controls.Add(label1);
             Controls.Add(saveButton);
@@ -167,5 +179,6 @@ namespace DatabaseSyncApp
         private System.Windows.Forms.Button saveButton;
         private TextBox nameTextBox;
         private Label label1;
+        private Button testButton;
     }
 }
