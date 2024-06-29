@@ -27,11 +27,12 @@
             progressBar = new ProgressBar();
             btnDeleteSource = new Button();
             btnRefreshSource = new Button();
-            cancelTransferButton = new Button();
             messageLabel = new Label();
             tableProgressBar = new ProgressBar();
             label3 = new Label();
             label4 = new Label();
+            btnRefreshDestination = new Button();
+            btnDeleteDestination = new Button();
             SuspendLayout();
             // 
             // sourceComboBox
@@ -68,7 +69,7 @@
             transferButton.Location = new Point(111, 179);
             transferButton.Margin = new Padding(4, 3, 4, 3);
             transferButton.Name = "transferButton";
-            transferButton.Size = new Size(185, 36);
+            transferButton.Size = new Size(377, 36);
             transferButton.TabIndex = 6;
             transferButton.Text = "Transfer";
             transferButton.UseVisualStyleBackColor = false;
@@ -76,6 +77,7 @@
             // 
             // addConnectionStringButton
             // 
+            addConnectionStringButton.BackColor = Color.Gold;
             addConnectionStringButton.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold);
             addConnectionStringButton.Location = new Point(111, 137);
             addConnectionStringButton.Margin = new Padding(4, 3, 4, 3);
@@ -83,7 +85,7 @@
             addConnectionStringButton.Size = new Size(377, 36);
             addConnectionStringButton.TabIndex = 7;
             addConnectionStringButton.Text = "Confige New Connection";
-            addConnectionStringButton.UseVisualStyleBackColor = true;
+            addConnectionStringButton.UseVisualStyleBackColor = false;
             addConnectionStringButton.Click += AddConnectionStringButton_Click;
             // 
             // label1
@@ -162,19 +164,6 @@
             btnRefreshSource.UseVisualStyleBackColor = false;
             btnRefreshSource.Click += BtnRefreshSource_Click;
             // 
-            // cancelTransferButton
-            // 
-            cancelTransferButton.BackColor = Color.IndianRed;
-            cancelTransferButton.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold);
-            cancelTransferButton.Location = new Point(303, 179);
-            cancelTransferButton.Margin = new Padding(4, 3, 4, 3);
-            cancelTransferButton.Name = "cancelTransferButton";
-            cancelTransferButton.Size = new Size(185, 36);
-            cancelTransferButton.TabIndex = 19;
-            cancelTransferButton.Text = "Cancel Transfer";
-            cancelTransferButton.UseVisualStyleBackColor = false;
-            cancelTransferButton.Click += cancelTransferButton_Click;
-            // 
             // messageLabel
             // 
             messageLabel.AutoSize = true;
@@ -213,17 +202,44 @@
             label4.TabIndex = 23;
             label4.Text = "Table Transaction";
             // 
+            // btnRefreshDestination
+            // 
+            btnRefreshDestination.BackColor = SystemColors.HighlightText;
+            btnRefreshDestination.Font = new Font("Segoe UI", 12F);
+            btnRefreshDestination.Image = (Image)resources.GetObject("btnRefreshDestination.Image");
+            btnRefreshDestination.Location = new Point(542, 85);
+            btnRefreshDestination.Margin = new Padding(4, 3, 4, 3);
+            btnRefreshDestination.Name = "btnRefreshDestination";
+            btnRefreshDestination.Size = new Size(38, 29);
+            btnRefreshDestination.TabIndex = 25;
+            btnRefreshDestination.UseVisualStyleBackColor = false;
+            btnRefreshDestination.Click += btnRefreshDestination_Click;
+            // 
+            // btnDeleteDestination
+            // 
+            btnDeleteDestination.BackColor = SystemColors.HighlightText;
+            btnDeleteDestination.Font = new Font("Segoe UI", 12F);
+            btnDeleteDestination.Image = (Image)resources.GetObject("btnDeleteDestination.Image");
+            btnDeleteDestination.Location = new Point(496, 84);
+            btnDeleteDestination.Margin = new Padding(4, 3, 4, 3);
+            btnDeleteDestination.Name = "btnDeleteDestination";
+            btnDeleteDestination.Size = new Size(38, 30);
+            btnDeleteDestination.TabIndex = 24;
+            btnDeleteDestination.UseVisualStyleBackColor = false;
+            btnDeleteDestination.Click += btnDeleteDestination_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Info;
             ClientSize = new Size(599, 316);
+            Controls.Add(btnRefreshDestination);
+            Controls.Add(btnDeleteDestination);
             Controls.Add(label4);
             Controls.Add(label3);
             Controls.Add(tableProgressBar);
             Controls.Add(messageLabel);
-            Controls.Add(cancelTransferButton);
             Controls.Add(btnRefreshSource);
             Controls.Add(btnDeleteSource);
             Controls.Add(progressBar);
@@ -238,6 +254,7 @@
             Margin = new Padding(4, 3, 4, 3);
             Name = "Form1";
             Text = "Database Sync";
+            Load += Form1_Load;
             ResumeLayout(false);
             PerformLayout();
         }
@@ -253,10 +270,11 @@
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Button btnDeleteSource;
         private System.Windows.Forms.Button btnRefreshSource;
-        private Button cancelTransferButton;
         private Label label3;
         private Label messageLabel;
         private ProgressBar tableProgressBar;
         private Label label4;
+        private Button btnRefreshDestination;
+        private Button btnDeleteDestination;
     }
 }

@@ -1,6 +1,4 @@
-﻿
-
-namespace DatabaseSyncApp
+﻿namespace DatabaseSyncApp
 {
     partial class ConnectionStringConfigForm
     {
@@ -29,6 +27,8 @@ namespace DatabaseSyncApp
             nameTextBox = new TextBox();
             label1 = new Label();
             testButton = new Button();
+            sourceRadioButton = new RadioButton();
+            destinationRadioButton = new RadioButton();
             SuspendLayout();
             // 
             // serverLabel
@@ -106,7 +106,7 @@ namespace DatabaseSyncApp
             // 
             // saveButton
             // 
-            saveButton.Location = new Point(258, 221);
+            saveButton.Location = new Point(258, 260);
             saveButton.Margin = new Padding(4, 3, 4, 3);
             saveButton.Name = "saveButton";
             saveButton.Size = new Size(88, 27);
@@ -135,7 +135,7 @@ namespace DatabaseSyncApp
             // 
             // testButton
             // 
-            testButton.Location = new Point(113, 221);
+            testButton.Location = new Point(113, 260);
             testButton.Margin = new Padding(4, 3, 4, 3);
             testButton.Name = "testButton";
             testButton.Size = new Size(116, 27);
@@ -144,11 +144,35 @@ namespace DatabaseSyncApp
             testButton.UseVisualStyleBackColor = true;
             testButton.Click += testButton_Click;
             // 
+            // sourceRadioButton
+            // 
+            sourceRadioButton.AutoSize = true;
+            sourceRadioButton.Location = new Point(112, 220);
+            sourceRadioButton.Name = "sourceRadioButton";
+            sourceRadioButton.Size = new Size(60, 19);
+            sourceRadioButton.TabIndex = 12;
+            sourceRadioButton.TabStop = true;
+            sourceRadioButton.Text = "Source";
+            sourceRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // destinationRadioButton
+            // 
+            destinationRadioButton.AutoSize = true;
+            destinationRadioButton.Location = new Point(195, 220);
+            destinationRadioButton.Name = "destinationRadioButton";
+            destinationRadioButton.Size = new Size(86, 19);
+            destinationRadioButton.TabIndex = 13;
+            destinationRadioButton.TabStop = true;
+            destinationRadioButton.Text = "Destination";
+            destinationRadioButton.UseVisualStyleBackColor = true;
+            // 
             // ConnectionStringConfigForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(358, 289);
+            ClientSize = new Size(358, 313);
+            Controls.Add(destinationRadioButton);
+            Controls.Add(sourceRadioButton);
             Controls.Add(testButton);
             Controls.Add(nameTextBox);
             Controls.Add(label1);
@@ -180,5 +204,7 @@ namespace DatabaseSyncApp
         private TextBox nameTextBox;
         private Label label1;
         private Button testButton;
+        private RadioButton sourceRadioButton;
+        private RadioButton destinationRadioButton;
     }
 }

@@ -17,6 +17,7 @@ namespace DatabaseSyncApp
         public ConnectionStringConfigForm()
         {
             InitializeComponent();
+            this.StartPosition = FormStartPosition.CenterScreen; // Center the main form
         }
 
         private void SaveButton_Click(object sender, EventArgs e)
@@ -29,14 +30,17 @@ namespace DatabaseSyncApp
 
             string connectionString = $"Server={serverName};Database={databaseName};User Id={username};Password={password};";
 
+            // Determine the connection type
+            string connectionType = sourceRadioButton.Checked ? "Source" : "Destination";
+
             // Save the connection string to the XML file
-            SaveConnectionString(name, connectionString);
+            SaveConnectionString(name, connectionString, connectionType);
 
             MessageBox.Show("Connection string saved successfully.");
             this.Close();
         }
 
-        private void SaveConnectionString(string name, string connectionString)
+        private void SaveConnectionString(string name, string connectionString, string connectionType)
         {
             // Load existing XML or create a new one if it doesn't exist
             XDocument doc;
@@ -52,7 +56,8 @@ namespace DatabaseSyncApp
             // Add the new connection string to the XML
             doc.Root.Add(new XElement("Connection",
                                 new XElement("Name", name),
-                                new XElement("ConnectionString", connectionString)));
+                                new XElement("ConnectionString", connectionString),
+                                new XElement("Type", connectionType))); // Add the type (Source/Destination)
 
             // Save the XML file
             doc.Save("connectionStrings.xml");
@@ -75,9 +80,6 @@ namespace DatabaseSyncApp
                 return false;
             }
         }
-
-
-
 
         private void testButton_Click(object sender, EventArgs e)
         {
