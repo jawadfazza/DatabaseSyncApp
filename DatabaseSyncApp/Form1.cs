@@ -107,10 +107,7 @@ namespace DatabaseSyncApp
                 tableProgressBar.Value = 0;
                 foreach (string tableName in tableNames)
                 {
-                    if (tableName == "Branchs")
-                    { }
                     TransferTableData(sourceConnectionString, destinationConnectionString, tableName, progressBar);
-
                     tableProgressBar.Value = count++;
                     this.Invoke(new Action(() => messageLabel.Text = $"Data transfer for table - {tableName}."));
                 }
@@ -240,6 +237,7 @@ namespace DatabaseSyncApp
         {
             try
             {
+
                 // Get the column names and identify identity columns
                 List<string> columnNames = new List<string>();
                 List<string> insertColumnNames = new List<string>();
@@ -287,15 +285,18 @@ namespace DatabaseSyncApp
                     $"WHEN NOT MATCHED BY TARGET THEN " +
                     $"INSERT ({insertColumnsList}) " +
                     $"VALUES ({insertSourceColumnList}) " +
+                    $"WHEN NOT MATCHED BY SOURCE THEN " +
+                    $"DELETE " +
                     $";", connection))
                 {
                     int count = mergeCmd.ExecuteNonQuery();
                     progressBar.Value = count;
                 }
+
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error merging data from staging table to destination table: {ex.Message}");
+                //MessageBox.Show($"Error merging data from staging table to destination table: {ex.Message}");
             }
         }
         private string GetIdentityColumn(SqlConnection connection, string tableName)

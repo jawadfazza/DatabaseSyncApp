@@ -35,11 +35,11 @@ namespace DatabaseSyncApp
 
         private bool AuthenticateUser(string username, string password)
         {
-            string hashedPassword = HashPassword(password);
+           // string hashedPassword = HashPassword(password);
             XDocument doc = XDocument.Load("users.xml");
 
             var user = doc.Descendants("User")
-                .FirstOrDefault(u => u.Element("Username").Value == username && u.Element("Password").Value == hashedPassword);
+                .FirstOrDefault(u => u.Element("Username").Value == username && u.Element("Password").Value == password);
 
             if (user != null)
             {
