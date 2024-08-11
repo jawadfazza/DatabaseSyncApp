@@ -35,20 +35,28 @@ namespace DatabaseSyncApp
 
         private bool AuthenticateUser(string username, string password)
         {
-           // string hashedPassword = HashPassword(password);
-            XDocument doc = XDocument.Load("users.xml");
-
-            var user = doc.Descendants("User")
-                .FirstOrDefault(u => u.Element("Username").Value == username && u.Element("Password").Value == password);
-
-            if (user != null)
+            try
             {
-                CurrentUserRole = user.Element("Role").Value;
-                return true;
-            }
+                string exePath = AppDomain.CurrentDomain.BaseDirectory;
+                string filePath = Path.Combine(exePath, "users.xml");
+                XDocument doc = XDocument.Load(filePath);
 
+                var user = doc.Descendants("User")
+                    .FirstOrDefault(u => u.Element("Username").Value == username && u.Element("Password").Value == password);
+
+                if (user != null)
+                {
+                    CurrentUserRole = user.Element("Role").Value;
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error accessing user data: {ex.Message}");
+            }
             return false;
         }
+
 
         private string HashPassword(string password)
         {

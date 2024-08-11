@@ -285,8 +285,8 @@ namespace DatabaseSyncApp
                     $"WHEN NOT MATCHED BY TARGET THEN " +
                     $"INSERT ({insertColumnsList}) " +
                     $"VALUES ({insertSourceColumnList}) " +
-                    $"WHEN NOT MATCHED BY SOURCE THEN " +
-                    $"DELETE " +
+                    //$"WHEN NOT MATCHED BY SOURCE THEN " +
+                    //$"DELETE " +
                     $";", connection))
                 {
                     int count = mergeCmd.ExecuteNonQuery();
